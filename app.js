@@ -3,12 +3,26 @@ var gl = null;
 var points = [];
 var selectedPointIdx = -1;
 var mouseDown = false;
+var mouseDownCursorPosition = {x: 0, y: 0};
+var mouseDownOffset = {x: 0, y: 0};
+
+var offset = {x: 0, y: 0};
 
 var pointShaderProgram = null;
 var pointCoordLocation = null;
 var pointVertexBuffer = null;
 
 var pointResolutionUniformLocation = null;
+
+function worldToViewCoordinates( worldCoordinates )
+{
+	return {x: worldCoordinates.x - offset.x, y: worldCoordinates.y - offset.y};
+};
+
+function viewToWorldCoordinates( viewCoordinates )
+{
+	return {x: viewCoordinates.x + offset.x, y: viewCoordinates.y + offset.y};
+};
 
 function processMouseDown( event ) 
 {
@@ -23,9 +37,14 @@ function processMouseDown( event )
 	var cursorX = event.clientX - canvasRect.left;
 	var cursorY = event.clientY - canvasRect.top;
 	
+	mouseDownCursorPosition.x = cursorX;
+	mouseDownCursorPosition.y = cursorY;
+	mouseDownOffset.x = offset.x;
+	mouseDownOffset.y = offset.y;
+	
 	if (event.shiftKey)
 	{
-		points.push({x: cursorX, y: cursorY});
+		points.push( viewToWorldCoordinates({x: cursorX, y: cursorY}) );
 		selectedPointIdx = points.length - 1;
 	}
 	
@@ -66,16 +85,21 @@ function processMouseMove( event )
 	{
 		if (selectedPointIdx != -1)
 		{
-			points[selectedPointIdx].x = cursorX;
-			points[selectedPointIdx].y = cursorY;
+			points[selectedPointIdx] = viewToWorldCoordinates( {x: cursorX, y: cursorY} );
+		}
+		else
+		{
+			offset.x = mouseDownOffset.x - (cursorX - mouseDownCursorPosition.x);
+			offset.y = mouseDownOffset.y - (cursorY - mouseDownCursorPosition.y);
 		}
 	}
 	else
 	{
 		selectedPointIdx = -1;
 		points.forEach(function(point, idx) {
-			var dx = cursorX - point.x;
-			var dy = cursorY - point.y;
+			var pointPx = worldToViewCoordinates(point);
+			var dx = cursorX - pointPx.x;
+			var dy = cursorY - pointPx.y;
 			var distSq = dx * dx + dy * dy;
 			if (distSq < 16) // \todo: плохо, неименованная константа
 			{
@@ -104,6 +128,7 @@ function drawPoints()
 	gl.useProgram(pointShaderProgram);
 	
 	gl.uniform2f(pointResolutionUniformLocation, gl.canvas.width, gl.canvas.height);
+	gl.uniform2f(pointOffsetUniformLocation, offset.x, offset.y);
 	
 	gl.bindBuffer(gl.ARRAY_BUFFER, pointVertexBuffer);
 	var vertices = []
@@ -159,6 +184,7 @@ function init()
 
 	pointCoordLocation = gl.getAttribLocation(pointShaderProgram, "a_position");
 	pointResolutionUniformLocation = gl.getUniformLocation(pointShaderProgram, "u_resolution");
+	pointOffsetUniformLocation = gl.getUniformLocation(pointShaderProgram, "u_offset");
 	
 	renderFrame();
 }
@@ -169,9 +195,10 @@ function createPointShaderProgram()
 		'attribute vec3 a_position;' +
 		
 		'uniform vec2 u_resolution;' +
+		'uniform vec2 u_offset;' +
 			
 		'void main(void) {' +
-			'vec2 clipSpace = (vec2(a_position) / u_resolution) * 2.0 - 1.0;' + 
+			'vec2 clipSpace = ((vec2(a_position) - u_offset) / u_resolution) * 2.0 - 1.0;' + 
 			'gl_Position = vec4(clipSpace * vec2(1, -1), 0.0, 1.0);' +
 			'gl_PointSize = a_position.z;'+
 		'}';
