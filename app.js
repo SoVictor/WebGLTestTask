@@ -7,21 +7,43 @@ var mouseDownCursorPosition = {x: 0, y: 0};
 var mouseDownOffset = {x: 0, y: 0};
 
 var offset = {x: 0, y: 0};
+var scales = [0.03125, 0.0625, 0.125, 0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0];
+var scaleIdx = 5;
 
 var pointShaderProgram = null;
 var pointCoordLocation = null;
 var pointVertexBuffer = null;
 
 var pointResolutionUniformLocation = null;
+var pointOffsetUniformLocation = null;
+var pointScaleUniformLocation = null;
+
+// Функция для добавления обработчика событий
+function addHandler(object, event, handler) {
+	if (object.addEventListener) {
+	  object.addEventListener(event, handler, false);
+	}
+	else if (object.attachEvent) {
+	  object.attachEvent('on' + event, handler);
+	}
+	else alert("Обработчик колёсика мыши не поддерживается");
+}
+// Добавляем обработчики для разных браузеров
+addHandler(window, 'DOMMouseScroll', processMouseWheel);
+addHandler(window, 'mousewheel', processMouseWheel);
+addHandler(document, 'mousewheel', processMouseWheel);
+
 
 function worldToViewCoordinates( worldCoordinates )
 {
-	return {x: worldCoordinates.x - offset.x, y: worldCoordinates.y - offset.y};
+	let scale = scales[scaleIdx];
+	return {x: worldCoordinates.x * scale - offset.x, y: worldCoordinates.y * scale - offset.y};
 };
 
 function viewToWorldCoordinates( viewCoordinates )
 {
-	return {x: viewCoordinates.x + offset.x, y: viewCoordinates.y + offset.y};
+	let scale = scales[scaleIdx];
+	return {x: (viewCoordinates.x + offset.x) / scale, y: (viewCoordinates.y + offset.y) / scale};
 };
 
 function processMouseDown( event ) 
@@ -109,6 +131,43 @@ function processMouseMove( event )
 	}
 };
 
+function processMouseWheel( event )
+{
+	var delta;
+    event = event || window.event;
+    // Opera и IE работают со свойством wheelDelta
+    if (event.wheelDelta)
+	{
+		delta = event.wheelDelta / 120;
+		if (window.opera) 
+		{
+			delta = -delta;
+		}
+    }
+    else if (event.detail) { // Для Gecko
+      delta = -event.detail / 3;
+    }
+    // Запрещаем обработку события браузером по умолчанию
+    if (event.preventDefault) event.preventDefault();
+    event.returnValue = false;
+	
+	var canvas = document.getElementById("canvas-element-id");
+	var canvasRect = canvas.getBoundingClientRect();
+
+	var cursorX = event.clientX - canvasRect.left;
+	var cursorY = event.clientY - canvasRect.top;
+
+	cursorWorld = viewToWorldCoordinates({x: cursorX, y: cursorY});
+
+	scaleIdx = (delta > 0) ? (scaleIdx + 1) : (scaleIdx - 1);
+	scaleIdx = Math.max(0, Math.min(scaleIdx, scales.length - 1));
+	
+	newCursorPx = worldToViewCoordinates( cursorWorld );
+	
+	offset.x = offset.x - cursorX + newCursorPx.x;
+	offset.y = offset.y - cursorY + newCursorPx.y;
+};
+
 function renderFrame()
 {
 	gl.enable(gl.DEPTH_TEST);
@@ -129,6 +188,7 @@ function drawPoints()
 	
 	gl.uniform2f(pointResolutionUniformLocation, gl.canvas.width, gl.canvas.height);
 	gl.uniform2f(pointOffsetUniformLocation, offset.x, offset.y);
+	gl.uniform1f(pointScaleUniformLocation, scales[scaleIdx]);
 	
 	gl.bindBuffer(gl.ARRAY_BUFFER, pointVertexBuffer);
 	var vertices = []
@@ -185,6 +245,7 @@ function init()
 	pointCoordLocation = gl.getAttribLocation(pointShaderProgram, "a_position");
 	pointResolutionUniformLocation = gl.getUniformLocation(pointShaderProgram, "u_resolution");
 	pointOffsetUniformLocation = gl.getUniformLocation(pointShaderProgram, "u_offset");
+	pointScaleUniformLocation = gl.getUniformLocation(pointShaderProgram, "u_scale");
 	
 	renderFrame();
 }
@@ -196,9 +257,10 @@ function createPointShaderProgram()
 		
 		'uniform vec2 u_resolution;' +
 		'uniform vec2 u_offset;' +
+		'uniform float u_scale;' +
 			
 		'void main(void) {' +
-			'vec2 clipSpace = ((vec2(a_position) - u_offset) / u_resolution) * 2.0 - 1.0;' + 
+			'vec2 clipSpace = ((vec2(a_position * u_scale) - u_offset) / u_resolution) * 2.0 - 1.0;' + 
 			'gl_Position = vec4(clipSpace * vec2(1, -1), 0.0, 1.0);' +
 			'gl_PointSize = a_position.z;'+
 		'}';
