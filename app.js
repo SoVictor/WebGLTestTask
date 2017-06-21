@@ -46,6 +46,14 @@ function viewToWorldCoordinates( viewCoordinates )
 	return {x: (viewCoordinates.x + offset.x) / scale, y: (viewCoordinates.y + offset.y) / scale};
 };
 
+function getCursorPosition( mouseEvent )
+{
+	var canvas = document.getElementById("canvas-element-id");
+	var canvasRect = canvas.getBoundingClientRect();
+
+	return { x: (mouseEvent.clientX - canvasRect.left), y: (mouseEvent.clientY - canvasRect.top) };
+};
+
 function processMouseDown( event ) 
 {
 	if (event.which != 1)
@@ -53,20 +61,16 @@ function processMouseDown( event )
 		return;
 	}
 
-	var canvas = document.getElementById("canvas-element-id");
-	var canvasRect = canvas.getBoundingClientRect();
-
-	var cursorX = event.clientX - canvasRect.left;
-	var cursorY = event.clientY - canvasRect.top;
+	var cursorPosition = getCursorPosition( event );
 	
-	mouseDownCursorPosition.x = cursorX;
-	mouseDownCursorPosition.y = cursorY;
+	mouseDownCursorPosition.x = cursorPosition.x;
+	mouseDownCursorPosition.y = cursorPosition.y;
 	mouseDownOffset.x = offset.x;
 	mouseDownOffset.y = offset.y;
 	
 	if (event.shiftKey)
 	{
-		points.push( viewToWorldCoordinates({x: cursorX, y: cursorY}) );
+		points.push( viewToWorldCoordinates(cursorPosition) );
 		selectedPointIdx = points.length - 1;
 	}
 	
@@ -80,12 +84,6 @@ function processMouseUp( event )
 		return;
 	}
 	
-	var canvas = document.getElementById("canvas-element-id");
-	var canvasRect = canvas.getBoundingClientRect();
-
-	var cursorX = event.clientX - canvasRect.left;
-	var cursorY = event.clientY - canvasRect.top;
-	
 	if (event.altKey && selectedPointIdx != -1)
 	{
 		points.splice(selectedPointIdx, 1);
@@ -97,22 +95,18 @@ function processMouseUp( event )
 
 function processMouseMove( event ) 
 {
-	var canvas = document.getElementById("canvas-element-id");
-	var canvasRect = canvas.getBoundingClientRect();
-
-	var cursorX = event.clientX - canvasRect.left;
-	var cursorY = event.clientY - canvasRect.top;
+	var cursorPosition = getCursorPosition( event );
 	
 	if (mouseDown)
 	{
 		if (selectedPointIdx != -1)
 		{
-			points[selectedPointIdx] = viewToWorldCoordinates( {x: cursorX, y: cursorY} );
+			points[selectedPointIdx] = viewToWorldCoordinates( cursorPosition );
 		}
 		else
 		{
-			offset.x = mouseDownOffset.x - (cursorX - mouseDownCursorPosition.x);
-			offset.y = mouseDownOffset.y - (cursorY - mouseDownCursorPosition.y);
+			offset.x = mouseDownOffset.x - (cursorPosition.x - mouseDownCursorPosition.x);
+			offset.y = mouseDownOffset.y - (cursorPosition.y - mouseDownCursorPosition.y);
 		}
 	}
 	else
@@ -120,8 +114,8 @@ function processMouseMove( event )
 		selectedPointIdx = -1;
 		points.forEach(function(point, idx) {
 			var pointPx = worldToViewCoordinates(point);
-			var dx = cursorX - pointPx.x;
-			var dy = cursorY - pointPx.y;
+			var dx = cursorPosition.x - pointPx.x;
+			var dy = cursorPosition.y - pointPx.y;
 			var distSq = dx * dx + dy * dy;
 			if (distSq < 16) // \todo: плохо, неименованная константа
 			{
@@ -151,21 +145,16 @@ function processMouseWheel( event )
     if (event.preventDefault) event.preventDefault();
     event.returnValue = false;
 	
-	var canvas = document.getElementById("canvas-element-id");
-	var canvasRect = canvas.getBoundingClientRect();
-
-	var cursorX = event.clientX - canvasRect.left;
-	var cursorY = event.clientY - canvasRect.top;
-
-	cursorWorld = viewToWorldCoordinates({x: cursorX, y: cursorY});
+	var cursorPosition = getCursorPosition( event );
+	var cursorWorld = viewToWorldCoordinates(cursorPosition);
 
 	scaleIdx = (delta > 0) ? (scaleIdx + 1) : (scaleIdx - 1);
 	scaleIdx = Math.max(0, Math.min(scaleIdx, scales.length - 1));
 	
-	newCursorPx = worldToViewCoordinates( cursorWorld );
+	var newCursorPx = worldToViewCoordinates( cursorWorld );
 	
-	offset.x = offset.x - cursorX + newCursorPx.x;
-	offset.y = offset.y - cursorY + newCursorPx.y;
+	offset.x = offset.x - cursorPosition.x + newCursorPx.x;
+	offset.y = offset.y - cursorPosition.y + newCursorPx.y;
 };
 
 function renderFrame()
