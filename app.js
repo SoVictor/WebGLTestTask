@@ -1,3 +1,5 @@
+'use strict';
+
 var gl = null;
 
 var points = [];
