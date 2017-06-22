@@ -185,6 +185,12 @@ function processMouseWheel( event )
 };
 
 
+function onSave()
+{
+	alert(JSON.stringify(points));
+}
+
+
 function renderFrame()
 {
 	gl.enable(gl.DEPTH_TEST);
