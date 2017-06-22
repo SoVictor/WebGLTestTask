@@ -320,6 +320,8 @@ function processMouseDown( event )
 			points.splice(selectedPointIdx, 1);
 			selectedPointIdx = -1;
 		}
+		
+		updateSelectedPointInfo();
 	}
 };
 
@@ -362,6 +364,8 @@ function processMouseMove( event )
 				selectedPointIdx = idx;
 			}
 		});
+		
+		updateSelectedPointInfo();
 	}
 };
 
@@ -431,6 +435,19 @@ function viewToWorldCoordinates( viewCoordinates )
 	let scale = scales[scaleIdx];
 	return {x: (viewCoordinates.x + offset.x) / scale, y: (viewCoordinates.y + offset.y) / scale};
 };
+
+
+function updateSelectedPointInfo()
+{
+	var info = document.getElementById("selected-point-info");
+	if (info != null)
+	{
+		if (selectedPointIdx == -1)
+			info.innerHTML  = 'No selected point.';
+		else
+			info.innerHTML  = 'Point ' + (selectedPointIdx + 1) + ' selected.';
+	}
+}
 
 
 function onSave()
