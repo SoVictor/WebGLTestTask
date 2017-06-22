@@ -295,42 +295,41 @@ function drawImage()
 
 function processMouseDown( event ) 
 {
-	if (event.which != 1)
+	if (event.which == 1)
 	{
-		return;
+		let cursorPosition = getCursorPosition( event );
+		
+		mouseDownCursorPosition.x = cursorPosition.x;
+		mouseDownCursorPosition.y = cursorPosition.y;
+		mouseDownOffset.x = offset.x;
+		mouseDownOffset.y = offset.y;
+		
+		mouseDown = true;
 	}
-
-	var cursorPosition = getCursorPosition( event );
-	
-	mouseDownCursorPosition.x = cursorPosition.x;
-	mouseDownCursorPosition.y = cursorPosition.y;
-	mouseDownOffset.x = offset.x;
-	mouseDownOffset.y = offset.y;
-	
-	if (event.shiftKey)
+	else if (event.which == 3)
 	{
-		points.push( viewToWorldCoordinates(cursorPosition) );
-		selectedPointIdx = points.length - 1;
+		let cursorPosition = getCursorPosition( event );
+		
+		if (selectedPointIdx == -1)
+		{
+			points.push( viewToWorldCoordinates(cursorPosition) );
+			selectedPointIdx = points.length - 1;
+		}
+		else
+		{
+			points.splice(selectedPointIdx, 1);
+			selectedPointIdx = -1;
+		}
 	}
-	
-	mouseDown = true;
 };
 
 
 function processMouseUp( event ) 
 {
-	if (event.which != 1)
+	if (event.which == 1)
 	{
-		return;
+		mouseDown = false;
 	}
-	
-	if (event.altKey && selectedPointIdx != -1)
-	{
-		points.splice(selectedPointIdx, 1);
-		selectedPointIdx = -1;
-	}
-	
-	mouseDown = false;
 };
 
 
@@ -383,8 +382,10 @@ function processMouseWheel( event )
     else if (event.detail) { // Для Gecko
       delta = -event.detail / 3;
     }
+	
     // Запрещаем обработку события браузером по умолчанию
-    if (event.preventDefault) event.preventDefault();
+    if (event.preventDefault) 
+		event.preventDefault();
     event.returnValue = false;
 	
 	var cursorPosition = getCursorPosition( event );
@@ -397,6 +398,15 @@ function processMouseWheel( event )
 	
 	offset.x = offset.x - cursorPosition.x + newCursorPx.x;
 	offset.y = offset.y - cursorPosition.y + newCursorPx.y;
+};
+
+
+function processContextMenu( event ) 
+{
+	// не вызывать контекстное меню
+	if (event.preventDefault) 
+		event.preventDefault();
+    event.returnValue = false;
 };
 
 
