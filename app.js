@@ -246,11 +246,11 @@ function drawPoints()
 	
 	gl.bindBuffer(gl.ARRAY_BUFFER, pointVertexBuffer);
 	var vertices = [];
-    for (var point of points.values()) {
+    points.forEach(function(point) {
         vertices.push(point.x);
 		vertices.push(point.y);
 		vertices.push( point.idx == selectedPointIdx ? 10 : 4 );
-    }
+    });
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
 	gl.vertexAttribPointer(pointCoordLocation, 3, gl.FLOAT, false, 0, 0);
 	gl.enableVertexAttribArray(pointCoordLocation);
@@ -362,16 +362,16 @@ function processMouseMove( event )
 	else
 	{
 		selectedPointIdx = -1;
-        for (var [idx, point] of points) {
-			var pointPx = worldToViewCoordinates(point);
+        points.forEach(function(point) {
+            var pointPx = worldToViewCoordinates(point);
 			var dx = cursorPosition.x - pointPx.x;
 			var dy = cursorPosition.y - pointPx.y;
 			var distSq = dx * dx + dy * dy;
 			if (distSq < 16) // \todo: плохо, неименованная константа
 			{
-				selectedPointIdx = idx;
+				selectedPointIdx = point.idx;
 			}
-		};
+        });
 		
 		updateSelectedPointInfo();
 	}
@@ -464,8 +464,6 @@ function addFreeIndex(idx) // O(N)
         i++;
  
     freeIndexes.splice(i, 0, idx);
-    
-    alert(freeIndexes);
 };
 
 function updateSelectedPointInfo()
@@ -484,8 +482,8 @@ function updateSelectedPointInfo()
 function onSave()
 {
     var pointsArray = [];
-    for (var point of points.values()) {
+    points.forEach(function(point) {
         pointsArray.push(point);
-    }
+    });
 	alert(JSON.stringify(pointsArray));
 }
