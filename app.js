@@ -1,5 +1,10 @@
 'use strict';
 
+var FRAME_MIN_DURATION = 25;
+var POINT_INTERACTION_RADIUS = 4;
+var NORMAL_POINT_SIZE = 4;
+var SELECTED_POINT_SIZE = 10;
+
 var gl = null;
 
 
@@ -141,7 +146,7 @@ function getGLContext()
 function createPointShaderProgram()
 {
 	var vertCode =
-		'attribute vec3 a_position;' +
+		'attribute vec3 a_position;' + // координата z используется для передачи размера точки
 		
 		'uniform vec2 u_resolution;' +
 		'uniform mat3 u_matrix;' +
@@ -229,7 +234,7 @@ function renderFrame()
 	drawPoints();
 	drawImage();
 	
-	setTimeout(renderFrame, 20); // \todo: плохо, неименованная константа
+	setTimeout(renderFrame, FRAME_MIN_DURATION);
 }
 
 
@@ -249,7 +254,7 @@ function drawPoints()
     points.forEach(function(point) {
         vertices.push(point.x);
 		vertices.push(point.y);
-		vertices.push( point.idx == selectedPointIdx ? 10 : 4 );
+		vertices.push( point.idx == selectedPointIdx ? SELECTED_POINT_SIZE : NORMAL_POINT_SIZE );
     });
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
 	gl.vertexAttribPointer(pointCoordLocation, 3, gl.FLOAT, false, 0, 0);
@@ -282,7 +287,6 @@ function drawImage()
 	
 	gl.bindTexture(gl.TEXTURE_2D, texture);
  
-	// Set the parameters so we can render any size image.
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -367,7 +371,7 @@ function processMouseMove( event )
 			var dx = cursorPosition.x - pointPx.x;
 			var dy = cursorPosition.y - pointPx.y;
 			var distSq = dx * dx + dy * dy;
-			if (distSq < 16) // \todo: плохо, неименованная константа
+			if (distSq < POINT_INTERACTION_RADIUS * POINT_INTERACTION_RADIUS)
 			{
 				selectedPointIdx = point.idx;
 			}
