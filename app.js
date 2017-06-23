@@ -22,8 +22,7 @@ var pointCoordLocation = null;
 var pointVertexBuffer = null;
 
 var pointResolutionUniformLocation = null;
-var pointOffsetUniformLocation = null;
-var pointScaleUniformLocation = null;
+var pointMatrixUniformLocation = null;
 
 
 var texture = null;
@@ -35,8 +34,7 @@ var imageTexCoordLocation = null;
 var imageTexCoordBuffer = null;
 
 var imageResolutionUniformLocation = null;
-var imageOffsetUniformLocation = null;
-var imageScaleUniformLocation = null;
+var imageMatrixUniformLocation = null;
 
 
 // Функция для добавления обработчика событий
@@ -65,8 +63,7 @@ function init()
 
 	pointCoordLocation = gl.getAttribLocation(pointShaderProgram, "a_position");
 	pointResolutionUniformLocation = gl.getUniformLocation(pointShaderProgram, "u_resolution");
-	pointOffsetUniformLocation = gl.getUniformLocation(pointShaderProgram, "u_offset");
-	pointScaleUniformLocation = gl.getUniformLocation(pointShaderProgram, "u_scale");
+	pointMatrixUniformLocation = gl.getUniformLocation(pointShaderProgram, "u_matrix");
 	
 
 	imageShaderProgram = createImageShaderProgram();
@@ -77,8 +74,7 @@ function init()
 	imageCoordLocation = gl.getAttribLocation(imageShaderProgram, "a_position");
 	imageTexCoordLocation = gl.getAttribLocation(imageShaderProgram, "a_texCoord");
 	imageResolutionUniformLocation = gl.getUniformLocation(imageShaderProgram, "u_resolution");
-	imageOffsetUniformLocation = gl.getUniformLocation(imageShaderProgram, "u_offset");
-	imageScaleUniformLocation = gl.getUniformLocation(imageShaderProgram, "u_scale");
+	imageMatrixUniformLocation = gl.getUniformLocation(imageShaderProgram, "u_matrix");
 	
 	
 	var image = new Image();
@@ -148,11 +144,10 @@ function createPointShaderProgram()
 		'attribute vec3 a_position;' +
 		
 		'uniform vec2 u_resolution;' +
-		'uniform vec2 u_offset;' +
-		'uniform float u_scale;' +
+		'uniform mat3 u_matrix;' +
 			
 		'void main(void) {' +
-			'vec2 clipSpace = ((vec2(a_position * u_scale) - u_offset) / u_resolution) * 2.0 - 1.0;' + 
+			'vec2 clipSpace = ((u_matrix * vec3(a_position.xy, 1)).xy / u_resolution) * 2.0 - 1.0;' + 
 			'gl_Position = vec4(clipSpace * vec2(1, -1), 0.0, 1.0);' +
 			'gl_PointSize = a_position.z;'+
 		'}';
@@ -185,13 +180,12 @@ function createImageShaderProgram()
 		'attribute vec2 a_texCoord;' +
 		
 		'uniform vec2 u_resolution;' +
-		'uniform vec2 u_offset;' +
-		'uniform float u_scale;' +
+		'uniform mat3 u_matrix;' +
 		
 		'varying vec2 v_texCoord;' +
 			
 		'void main(void) {' +
-			'vec2 clipSpace = ((vec2(a_position * u_scale) - u_offset) / u_resolution) * 2.0 - 1.0;' + 
+			'vec2 clipSpace = ((u_matrix * vec3(a_position, 1)).xy / u_resolution) * 2.0 - 1.0;' + 
 			'gl_Position = vec4(clipSpace * vec2(1, -1), 0.0, 1.0);' +
 			'v_texCoord = a_texCoord;' +
 		'}';
@@ -244,8 +238,11 @@ function drawPoints()
 	gl.useProgram(pointShaderProgram);
 	
 	gl.uniform2f(pointResolutionUniformLocation, gl.canvas.width, gl.canvas.height);
-	gl.uniform2f(pointOffsetUniformLocation, offset.x, offset.y);
-	gl.uniform1f(pointScaleUniformLocation, scales[scaleIdx]);
+	gl.uniformMatrix3fv(pointMatrixUniformLocation, false, [
+        scales[scaleIdx], 0 , 0,
+        0, scales[scaleIdx], 0,
+        -offset.x, -offset.y, 1,
+    ]);
 	
 	gl.bindBuffer(gl.ARRAY_BUFFER, pointVertexBuffer);
 	var vertices = []
@@ -267,8 +264,11 @@ function drawImage()
 	gl.useProgram(imageShaderProgram);
 	
 	gl.uniform2f(imageResolutionUniformLocation, gl.canvas.width, gl.canvas.height);
-	gl.uniform2f(imageOffsetUniformLocation, offset.x, offset.y);
-	gl.uniform1f(imageScaleUniformLocation, scales[scaleIdx]);
+    gl.uniformMatrix3fv(imageMatrixUniformLocation, false, [
+        scales[scaleIdx], 0 , 0,
+        0, scales[scaleIdx], 0,
+        -offset.x, -offset.y, 1,
+    ]);
 	
 	gl.bindBuffer(gl.ARRAY_BUFFER, imageVertexBuffer);
 	gl.vertexAttribPointer(imageCoordLocation, 2, gl.FLOAT, false, 0, 0);
