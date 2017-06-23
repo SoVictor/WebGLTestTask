@@ -15,7 +15,7 @@ var mouseDownOffset = {x: 0, y: 0};
 
 var points = [];
 var selectedPointIdx = -1;
-
+var freeIndexes = [];
 
 var pointShaderProgram = null;
 var pointCoordLocation = null;
@@ -249,7 +249,7 @@ function drawPoints()
 	points.forEach(function(point, idx) {
 		vertices.push(point.x);
 		vertices.push(point.y);
-		vertices.push( idx == selectedPointIdx ? 10 : 4 );
+		vertices.push( point.idx == selectedPointIdx ? 10 : 4 );
 	});
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
 	gl.vertexAttribPointer(pointCoordLocation, 3, gl.FLOAT, false, 0, 0);
@@ -312,12 +312,21 @@ function processMouseDown( event )
 		
 		if (selectedPointIdx == -1)
 		{
-			points.push( viewToWorldCoordinates(cursorPosition) );
-			selectedPointIdx = points.length - 1;
+            let coord = viewToWorldCoordinates(cursorPosition);
+            
+            selectedPointIdx = takeFirstFreeIndex();
+            
+			points.push( {idx: selectedPointIdx, x: coord.x, y: coord.y} );
 		}
 		else
 		{
-			points.splice(selectedPointIdx, 1);
+            let pointPositionInArray = 0;
+            while (points[pointPositionInArray].idx != selectedPointIdx)
+                pointPositionInArray += 1;
+			points.splice(pointPositionInArray, 1);
+            
+            freeIndexes.push(selectedPointIdx);
+            
 			selectedPointIdx = -1;
 		}
 		
@@ -354,14 +363,14 @@ function processMouseMove( event )
 	else
 	{
 		selectedPointIdx = -1;
-		points.forEach(function(point, idx) {
+		points.forEach(function(point) {
 			var pointPx = worldToViewCoordinates(point);
 			var dx = cursorPosition.x - pointPx.x;
 			var dy = cursorPosition.y - pointPx.y;
 			var distSq = dx * dx + dy * dy;
 			if (distSq < 16) // \todo: плохо, неименованная константа
 			{
-				selectedPointIdx = idx;
+				selectedPointIdx = point.idx;
 			}
 		});
 		
@@ -437,6 +446,27 @@ function viewToWorldCoordinates( viewCoordinates )
 };
 
 
+function takeFirstFreeIndex()
+{
+    if (freeIndexes.length == 0)
+    {
+        return points.length;
+    }
+    else
+    {
+        let minIdxPosition = 0;
+        for (var i = 1; i < freeIndexes.length; i++)
+        {
+            if (freeIndexes[minIdxPosition] > freeIndexes[i])
+                minIdxPosition = i;
+        }
+        let idx = freeIndexes[minIdxPosition];
+        freeIndexes.splice(minIdxPosition, 1);
+        return idx;
+    }
+};
+
+
 function updateSelectedPointInfo()
 {
 	var info = document.getElementById("selected-point-info");
@@ -445,7 +475,7 @@ function updateSelectedPointInfo()
 		if (selectedPointIdx == -1)
 			info.innerHTML  = 'No selected point.';
 		else
-			info.innerHTML  = 'Point ' + (selectedPointIdx + 1) + ' selected.';
+			info.innerHTML  = 'Point ' + selectedPointIdx + ' selected.';
 	}
 }
 
