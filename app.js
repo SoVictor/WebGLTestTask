@@ -352,7 +352,9 @@ function processMouseMove( event )
 	{
 		if (selectedPointIdx != -1)
 		{
-			points[selectedPointIdx] = viewToWorldCoordinates( cursorPosition );
+            let coord = viewToWorldCoordinates( cursorPosition );
+			points[selectedPointIdx].x = coord.x;
+            points[selectedPointIdx].y = coord.y;
 		}
 		else
 		{
