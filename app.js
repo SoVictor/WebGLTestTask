@@ -15,7 +15,7 @@ var mouseDownOffset = {x: 0, y: 0};
 
 var points = new Map();
 var selectedPointIdx = -1;
-var freeIndexes = [];
+var freeIndexes = []; // всегда отсортирован
 
 var pointShaderProgram = null;
 var pointCoordLocation = null;
@@ -314,15 +314,15 @@ function processMouseDown( event )
 		{
             let coord = viewToWorldCoordinates(cursorPosition);
             
-            selectedPointIdx = takeFirstFreeIndex();
+            selectedPointIdx = takeFirstFreeIndex(); // O( 1 )
             
-			points.set( selectedPointIdx, {idx: selectedPointIdx, x: coord.x, y: coord.y} );
+			points.set( selectedPointIdx, {idx: selectedPointIdx, x: coord.x, y: coord.y} ); // O( log(points.size) )
 		}
 		else
 		{
-            points.delete(selectedPointIdx);
+            points.delete(selectedPointIdx); // O( log(points.size) )
             
-            freeIndexes.push(selectedPointIdx);
+            addFreeIndex(selectedPointIdx); // O( freeIndexes.length )
             
 			selectedPointIdx = -1;
 		}
@@ -445,7 +445,7 @@ function viewToWorldCoordinates( viewCoordinates )
 };
 
 
-function takeFirstFreeIndex()
+function takeFirstFreeIndex() // O(1)
 {
     if (freeIndexes.length == 0)
     {
@@ -453,18 +453,20 @@ function takeFirstFreeIndex()
     }
     else
     {
-        let minIdxPosition = 0;
-        for (var i = 1; i < freeIndexes.length; i++)
-        {
-            if (freeIndexes[minIdxPosition] > freeIndexes[i])
-                minIdxPosition = i;
-        }
-        let idx = freeIndexes[minIdxPosition];
-        freeIndexes.splice(minIdxPosition, 1);
-        return idx;
+        return freeIndexes.pop();
     }
 };
 
+function addFreeIndex(idx) // O(N)
+{   
+    let i = 0;
+    while (freeIndexes[i] > idx)
+        i++;
+ 
+    freeIndexes.splice(i, 0, idx);
+    
+    alert(freeIndexes);
+};
 
 function updateSelectedPointInfo()
 {
