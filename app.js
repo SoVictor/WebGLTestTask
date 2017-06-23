@@ -13,7 +13,7 @@ var mouseDownCursorPosition = {x: 0, y: 0};
 var mouseDownOffset = {x: 0, y: 0};
 
 
-var points = [];
+var points = new Map();
 var selectedPointIdx = -1;
 var freeIndexes = [];
 
@@ -245,12 +245,12 @@ function drawPoints()
     ]);
 	
 	gl.bindBuffer(gl.ARRAY_BUFFER, pointVertexBuffer);
-	var vertices = []
-	points.forEach(function(point, idx) {
-		vertices.push(point.x);
+	var vertices = [];
+    for (var point of points.values()) {
+        vertices.push(point.x);
 		vertices.push(point.y);
 		vertices.push( point.idx == selectedPointIdx ? 10 : 4 );
-	});
+    }
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.DYNAMIC_DRAW);
 	gl.vertexAttribPointer(pointCoordLocation, 3, gl.FLOAT, false, 0, 0);
 	gl.enableVertexAttribArray(pointCoordLocation);
@@ -316,14 +316,11 @@ function processMouseDown( event )
             
             selectedPointIdx = takeFirstFreeIndex();
             
-			points.push( {idx: selectedPointIdx, x: coord.x, y: coord.y} );
+			points.set( selectedPointIdx, {idx: selectedPointIdx, x: coord.x, y: coord.y} );
 		}
 		else
 		{
-            let pointPositionInArray = 0;
-            while (points[pointPositionInArray].idx != selectedPointIdx)
-                pointPositionInArray += 1;
-			points.splice(pointPositionInArray, 1);
+            points.delete(selectedPointIdx);
             
             freeIndexes.push(selectedPointIdx);
             
@@ -352,9 +349,9 @@ function processMouseMove( event )
 	{
 		if (selectedPointIdx != -1)
 		{
-            let coord = viewToWorldCoordinates( cursorPosition );
-			points[selectedPointIdx].x = coord.x;
-            points[selectedPointIdx].y = coord.y;
+            var coord = viewToWorldCoordinates( cursorPosition );
+            var updatedPoint = {x: coord.x, y: coord.y, idx: selectedPointIdx};
+			points.set(selectedPointIdx, updatedPoint);
 		}
 		else
 		{
@@ -365,16 +362,16 @@ function processMouseMove( event )
 	else
 	{
 		selectedPointIdx = -1;
-		points.forEach(function(point) {
+        for (var [idx, point] of points) {
 			var pointPx = worldToViewCoordinates(point);
 			var dx = cursorPosition.x - pointPx.x;
 			var dy = cursorPosition.y - pointPx.y;
 			var distSq = dx * dx + dy * dy;
 			if (distSq < 16) // \todo: плохо, неименованная константа
 			{
-				selectedPointIdx = point.idx;
+				selectedPointIdx = idx;
 			}
-		});
+		};
 		
 		updateSelectedPointInfo();
 	}
@@ -452,7 +449,7 @@ function takeFirstFreeIndex()
 {
     if (freeIndexes.length == 0)
     {
-        return points.length;
+        return points.size;
     }
     else
     {
@@ -484,5 +481,9 @@ function updateSelectedPointInfo()
 
 function onSave()
 {
-	alert(JSON.stringify(points));
+    var pointsArray = [];
+    for (var point of points.values()) {
+        pointsArray.push(point);
+    }
+	alert(JSON.stringify(pointsArray));
 }
